@@ -1,0 +1,57 @@
+' ===============================================================
+' File: error_handling_template.bas
+' Author: Mehak Mehta
+' Created: 2025-11-06
+'
+' Purpose:
+'   Reusable VBA error-handling template that:
+'     - Ensures ScreenUpdating and EnableEvents are restored
+'     - Logs error details to an "ErrorLog" worksheet (auto-creates)
+'     - Provides a clear place to insert main code
+'
+' How to use:
+'   1. Import this module into your workbook.
+'   2. Copy the pattern inside "Main" or call the Error_Handle
+'      structure from your procedures by replacing the Main section.
+'   3. Optionally call LogErrorFromProcedure from other procedures.
+'
+' Notes:
+'   - ErrorLog columns: Timestamp | Procedure | ErrorNumber | ErrorDescription | Workbook | Worksheet
+'   - Always test on a copy of data before running in production.
+' ===============================================================
+
+Option Explicit
+
+' ---------------------------
+' Primary template procedure
+' ---------------------------
+Sub Error_Handle()
+    On Error GoTo ErrHandler
+
+    ' Save current state
+    Dim prevScreenUpdating As Boolean
+    Dim prevEnableEvents As Boolean
+
+    prevScreenUpdating = Application.ScreenUpdating
+    prevEnableEvents = Application.EnableEvents
+
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+
+    ' -----------------------------
+    ' MAIN CODE: Replace with real code
+    ' -----------------------------
+    ' Example (intentional error) - remove or replace:
+    ' ThisWorkbook.Worksheets("EmployeeData").Range("A2").Value = 10 / 0
+    '
+    ' Put your production code here.
+    ' -----------------------------
+
+Cleanup:
+    ' Restore application state
+    Application.ScreenUpdating = prevScreenUpdating
+    Application.EnableEvents = prevEnableEvents
+    Exit Sub
+
+ErrHandler:
+    ' Log the error to the ErrorLog sheet and show a mess
