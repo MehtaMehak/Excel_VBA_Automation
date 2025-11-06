@@ -1,0 +1,59 @@
+' ===============================================================
+' File: send_report_email.bas
+' Author: Mehak Mehta
+' Created: 2025-11-06
+'
+' Purpose:
+'   Automates sending an email via Microsoft Outlook from Excel VBA.
+'   Attaches a report (PDF, Excel, etc.) stored in the same folder
+'   as the workbook, and opens the email for user review before sending.
+'
+' Features:
+'   - Automatically attaches a specified file from the workbook directory.
+'   - Displays the email before sending (for manual review).
+'   - Includes graceful error handling and file existence check.
+'   - Uses late binding (no Outlook reference required).
+'
+' Usage:
+'   1. Place this module in your workbook or import the .bas file.
+'   2. Update the `fileName` variable with your actual report name.
+'   3. Update `.To`, `.Subject`, and `.Body` content as needed.
+'   4. Run the macro: Send_Report
+'
+' Notes:
+'   - Requires Microsoft Outlook to be installed on the system.
+'   - Safe to use; will not send automatically unless `.Send` is used.
+'   - Use `.Display` to preview the email before sending.
+' ===============================================================
+
+Option Explicit
+
+Sub Send_Report()
+    Dim olApp As Object
+    Dim olMail As Object
+    Dim filePath As String
+    Dim fileName As String
+
+    On Error GoTo ErrHandler
+
+    ' ----- Define the report file name and path -----
+    fileName = "Monthly Compensation Report.pdf"  ' <-- Update your filename here
+    filePath = ThisWorkbook.Path & "\" & fileName
+    ' -----------------------------------------------
+
+    ' Check if the file exists
+    If Dir(filePath) = "" Then
+        MsgBox "Attachment not found: " & filePath, vbExclamation, "File Missing"
+        Exit Sub
+    End If
+
+    ' Create Outlook instance (late binding)
+    On Error Resume Next
+    Set olApp = GetObject(, "Outlook.Application")
+    If olApp Is Nothing Then
+        Set olApp = CreateObject("Outlook.Application")
+    End If
+    On Error GoTo ErrHandler
+
+    If olApp Is Nothing Then
+        MsgBox "Outlook is not available on this system.", vbCri
