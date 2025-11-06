@@ -1,0 +1,104 @@
+' ===============================================================
+' File: merge_pdfs_into_word.bas
+' Author: Mehak Mehta
+' Created: 2025-11-06
+'
+' Purpose:
+'   Merges multiple PDF files from a specified folder into a
+'   single combined PDF using Microsoft Word automation.
+'
+' Description:
+'   - Uses late binding (no reference required to Word Library).
+'   - Opens Word invisibly and sequentially inserts each PDF.
+'   - Exports the combined result as a new PDF.
+'   - Handles folder checks and ensures a clean Word exit.
+'
+' Requirements:
+'   - Microsoft Word installed on the system.
+'   - Place all source PDF files in one folder.
+'
+' Configuration:
+'   1. Set the `folderPath` variable to your folder path.
+'   2. The output will be saved as "Combined_Output.pdf" in
+'      the same path as your workbook by default.
+'
+' Example:
+'   Input Folder: C:\Data\PDF\
+'       ├─ invoice1.pdf
+'       ├─ invoice2.pdf
+'       ├─ invoice3.pdf
+'
+'   Output:
+'       Combined_Output.pdf  (contains all three files merged)
+'
+' ===============================================================
+
+Option Explicit
+
+Sub MergePDFs_Into_Word()
+    Dim folderPath As String
+    Dim fileName As String
+    Dim outFile As String
+    Dim firstFile As Boolean
+    Dim wdApp As Object
+    Dim wdDoc As Object
+    
+    On Error GoTo ErrHandler
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    
+    ' --- CONFIGURE ---
+    folderPath = "C:\Data\PDF\"                                 ' <-- Ensure path ends with "\"
+    outFile = ThisWorkbook.Path & "\" & "Combined_Output.pdf"    ' <-- Output PDF name
+    ' -----------------
+    
+    ' Validate folder content
+    fileName = Dir(folderPath & "*.pdf")
+    If fileName = "" Then
+        MsgBox "No PDF files found in: " & folderPath, vbExclamation, "MergePDFs"
+        GoTo Cleanup
+    End If
+    
+    ' Create Word application (late binding)
+    Set wdApp = CreateObject("Word.Application")
+    wdApp.Visible = False
+    
+    ' Create new Word document
+    Set wdDoc = wdApp.Documents.Add
+    
+    firstFile = True
+    Do While fileName <> ""
+        ' Insert page break between files (after first)
+        If Not firstFile Then
+            wdApp.Selection.InsertBreak Type:=7   ' 7 = wdPageBreak
+        End If
+        
+        ' Insert PDF file into Word document
+        wdApp.Selection.InsertFile fileName:=folderPath & fileName
+        
+        firstFile = False
+        fileName = Dir()  ' Next PDF file
+    Loop
+    
+    ' Export combined document as a single PDF
+    wdDoc.ExportAsFixedFormat _
+        OutputFileName:=outFile, _
+        ExportFormat:=17   ' 17 = wdExportFormatPDF
+    
+    ' Close Word properly
+    wdDoc.Close SaveChanges:=False
+    wdApp.Quit
+    
+    MsgBox "✅ PDF files merged successfully!" & vbCrLf & "Saved to: " & outFile, vbInformation, "MergePDFs"
+    
+Cleanup:
+    Application.EnableEvents = True
+    Application.ScreenUpdating = True
+    Set wdDoc = Nothing
+    Set wdApp = Nothing
+    Exit Sub
+
+ErrHandler:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "MergePDFs_Into_Word"
+    Resume Cleanup
+End Sub
