@@ -1,0 +1,68 @@
+' ===============================================================
+' File: find_employee_id.bas
+' Author: Mehak Mehta
+' Created: 2025-11-06
+'
+' Purpose:
+'   VBA script to search for a specific Employee ID in column A
+'   of the "EmployeeData" sheet and display the row number.
+'
+' Description:
+'   - Uses Excel’s Find method for efficient searching.
+'   - Handles missing values and invalid sheet names gracefully.
+'   - Includes structured error handling.
+'
+' Usage:
+'   1. Import this module into Excel (Alt + F11 → File → Import File).
+'   2. Ensure your workbook has a sheet named "EmployeeData".
+'   3. Update the search value (e.g., "104") as needed.
+'   4. Run the macro `Find_Value` (Alt + F8 → Find_Value → Run).
+'
+' Example Output:
+'   ✅ “Employee ID 104 is found in Row 12.”
+'   ❌ “Employee ID 104 is not found in the sheet.”
+'
+' ===============================================================
+
+Option Explicit
+
+Sub Find_Value()
+    Dim ws As Worksheet
+    Dim f As Range
+    Dim searchValue As String
+
+    On Error GoTo ErrHandler
+
+    ' -----------------------------------------
+    ' Define worksheet and search value
+    ' -----------------------------------------
+    Set ws = ThisWorkbook.Worksheets("EmployeeData")
+    searchValue = "104"   ' 🔍 Change this value or make it input-based if needed
+
+    ' -----------------------------------------
+    ' Perform search using Find method
+    ' -----------------------------------------
+    Set f = ws.Range("A:A").Find(What:=searchValue, LookIn:=xlValues, LookAt:=xlWhole)
+
+    ' -----------------------------------------
+    ' Display results
+    ' -----------------------------------------
+    If Not f Is Nothing Then
+        MsgBox "✅ Employee ID " & searchValue & " is found in Row " & f.Row, _
+               vbInformation, "Search Result"
+    Else
+        MsgBox "❌ Employee ID " & searchValue & " is not found in the sheet.", _
+               vbExclamation, "Search Result"
+    End If
+
+Cleanup:
+    Exit Sub
+
+' -----------------------------------------
+' Error Handling Section
+' -----------------------------------------
+ErrHandler:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, _
+           vbExclamation, "Find_Value"
+    Resume Cleanup
+End Sub
