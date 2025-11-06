@@ -1,43 +1,68 @@
-Option Explicit
+' ===============================================================
+' File: highlight_duplicate_ids.bas
+' Author: Mehak Mehta
+' Created: 2025-11-06
+' Purpose:
+'   Highlight duplicate IDs in column A (from row 2 down) of the
+'   "EmployeeData" worksheet.
+'
+' Behavior:
+'   - Stores the first occurrence of each ID in a dictionary.
+'   - Highlights both the first occurrence and any later duplicates
+'     with yellow interior color.
+'   - Clears previous highlights in the scanned range before running.
+'   - Safe for empty sheets/columns (shows message and exits).
+'
+' Usage:
+'   1. Place this module in your workbook or import the .bas file.
+'   2. Ensure a worksheet named "EmployeeData" exists, or edit the
+'      ws assignment to target a different sheet.
+'   3. Run: HighlightDuplicateID
+'
+' Notes:
+'   - Uses late-bound Scripting.Dictionary (no reference required).
+'   - Does not alter cells outside A2:A[lastRow].
+'   - Testing: run on a copy of your workbook first.
+' ===============================================================
 
-' Highlight duplicate IDs in column A (from row 2 down)
-' - Stores the first occurrence in a dictionary
-' - Highlights both the first occurrence and any later duplicates in yellow
-' - Removes previous highlights before running
-' - Safe for empty sheets/columns
+Option Explicit
 
 Sub HighlightDuplicateID()
     Dim ws As Worksheet
     Dim lastRow As Long
     Dim rng As Range
     Dim cell As Range
-    Dim dict As Object              ' Scripting.Dictionary
+    Dim dict As Object              ' Scripting.Dictionary (late-bound)
     Dim key As String
     Dim existingCell As Range
-    
+
     On Error GoTo ErrHandler
-    
+
     Application.ScreenUpdating = False
     Application.EnableEvents = False
-    
+
+    ' ----- Change sheet name here if needed -----
     Set ws = ThisWorkbook.Worksheets("EmployeeData")
-    
+    ' -------------------------------------------
+
     ' find last used row in column A
     lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
     If lastRow < 2 Then
         MsgBox "No data found in column A starting from row 2.", vbInformation
         GoTo Cleanup
     End If
-    
+
     Set rng = ws.Range("A2:A" & lastRow)
-    
+
     ' clear previous interior color (only for that range)
+    On Error Resume Next
     rng.Interior.Pattern = xlNone
-    
-    ' create dictionary
+    On Error GoTo 0
+
+    ' create dictionary (late binding avoids setting references)
     Set dict = CreateObject("Scripting.Dictionary")
     dict.CompareMode = vbTextCompare    ' case-insensitive keys
-    
+
     ' loop through IDs
     For Each cell In rng
         If Len(Trim(CStr(cell.Value))) > 0 Then
@@ -66,4 +91,3 @@ ErrHandler:
     MsgBox "Error " & Err.Number & ": " & Err.Description, vbExclamation, "HighlightDuplicateID"
     Resume Cleanup
 End Sub
-
