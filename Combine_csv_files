@@ -1,0 +1,128 @@
+' ===============================================================
+' File: combine_csv_files.bas
+' Author: Mehak Mehta
+' Created: 2025-11-06
+'
+' Purpose:
+'   Combine all CSV files from a folder into a single worksheet in
+'   the current workbook. Preserves existing destination data and
+'   optionally skips CSV headers after the first file.
+'
+' Features:
+'   - Folder picker (or fallback to hard-coded path)
+'   - Creates destination sheet if it does not exist
+'   - Copies data from each CSV, skipping header rows after first file
+'   - Restores Excel state and includes error handling
+'
+' Usage:
+'   1. Import this module into your workbook (Alt+F11 -> File -> Import File).
+'   2. Update defaultFolderPath (optional) or pick a folder at runtime.
+'   3. Ensure destination sheet name is set (default "Master1") or change as needed.
+'   4. Run Combine_CSV.
+' ===============================================================
+
+Option Explicit
+
+Sub Combine_CSV()
+    Dim folderPath As String
+    Dim fileName As String
+    Dim wbSrc As Workbook
+    Dim wsDest As Worksheet
+    Dim lastRow As Long
+    Dim firstFile As Boolean
+    Dim fd As FileDialog
+    Dim defaultFolderPath As String
+    Dim srcRange As Range
+    Dim headerRowsToSkip As Long
+    
+    On Error GoTo ErrHandler
+    
+    ' ----- Configuration -----
+    defaultFolderPath = "C:\Data\csv\"     ' <-- optional fallback; change if you want
+    headerRowsToSkip = 1                   ' number of header rows to skip for subsequent files
+    ' -------------------------
+    
+    ' Prompt user to pick a folder (recommended). If user cancels, fallback to default.
+    Set fd = Application.FileDialog(msoFileDialogFolderPicker)
+    With fd
+        .Title = "Select folder containing CSV files (Cancel to use fallback)"
+        If .Show = -1 Then
+            folderPath = .SelectedItems(1) & Application.PathSeparator
+        Else
+            folderPath = defaultFolderPath
+        End If
+    End With
+    
+    If Len(folderPath) = 0 Then
+        MsgBox "No folder selected and no fallback folder defined. Exiting.", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Destination sheet (creates if missing)
+    On Error Resume Next
+    Set wsDest = ThisWorkbook.Worksheets("Master1")
+    On Error GoTo ErrHandler
+    If wsDest Is Nothing Then
+        Set wsDest = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
+        wsDest.Name = "Master1"
+    End If
+    
+    ' Get first CSV file
+    fileName = Dir(folderPath & "*.csv")
+    If fileName = "" Then
+        MsgBox "No CSV files found in: " & folderPath, vbExclamation, "Combine CSV"
+        Exit Sub
+    End If
+    
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    
+    firstFile = True
+    
+    Do While fileName <> ""
+        ' Open CSV as workbook (read-only)
+        Set wbSrc = Workbooks.Open(folderPath & fileName, ReadOnly:=True)
+        
+        ' Determine source used range on first sheet
+        Set srcRange = wbSrc.Sheets(1).UsedRange
+        
+        If Not srcRange Is Nothing Then
+            ' Find last used row in destination; if sheet empty, start at row 1
+            If Application.WorksheetFunction.CountA(wsDest.Cells) = 0 Then
+                lastRow = 0
+            Else
+                lastRow = wsDest.Cells(wsDest.Rows.Count, 1).End(xlUp).Row
+            End If
+            
+            ' If first file, copy entire used range (including header)
+            ' Otherwise, skip headerRowsToSkip rows from the top of srcRange
+            If firstFile Then
+                srcRange.Copy Destination:=wsDest.Cells(lastRow + 1, 1)
+                firstFile = False
+            Else
+                ' Ensure there are enough rows to skip
+                If srcRange.Rows.Count > headerRowsToSkip Then
+                    srcRange.Offset(headerRowsToSkip, 0).Resize(srcRange.Rows.Count - headerRowsToSkip, srcRange.Columns.Count) _
+                        .Copy Destination:=wsDest.Cells(lastRow + 1, 1)
+                Else
+                    ' If CSV only contains headers or fewer rows, skip copying
+                    ' (no action)
+                End If
+            End If
+        End If
+        
+        wbSrc.Close SaveChanges:=False
+        fileName = Dir()   ' get next file
+    Loop
+    
+    MsgBox "All CSV files combined successfully into sheet: " & wsDest.Name, vbInformation, "Task Completed"
+    
+Cleanup:
+    Application.EnableEvents = True
+    Application.ScreenUpdating = True
+    Exit Sub
+
+ErrHandler:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Combine_CSV"
+    Resume Cleanup
+End Sub
