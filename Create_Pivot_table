@@ -1,0 +1,123 @@
+' ===============================================================
+' File: create_compensation_pivot.bas
+' Author: Mehak Mehta
+' Created: 2025-11-06
+'
+' Purpose:
+'   Create a PivotTable from the "EmployeeData" sheet.
+'   - Reads the data region starting at A1 (headers in row 1).
+'   - Creates a new worksheet and inserts a PivotTable.
+'   - Adds "Department" as Row field and Sum of "Total Pay" as the data field.
+'   - Includes safe checks for sheet/headers and restores Excel state on exit.
+'
+' Usage:
+'   1. Import this module into your workbook (Alt+F11 → File → Import File).
+'   2. Ensure your "EmployeeData" sheet has headers "Department" and "Total Pay".
+'   3. Run the macro: Create_Compensation_Pivot
+'
+' Notes:
+'   - Header names must match exactly (case-insensitive match used).
+'   - If headers are missing, the macro alerts and exits cleanly.
+' ===============================================================
+
+Option Explicit
+
+Sub Create_Compensation_Pivot()
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim pvws As Worksheet
+    Dim pc As PivotCache
+    Dim pt As PivotTable
+    Dim srcRange As Range
+    Dim pivotSheetName As String
+    Dim baseName As String
+    Dim ts As String
+    Dim deptHeader As Variant
+    Dim totalPayHeader As Variant
+
+    baseName = "CompPivotSheet"
+    ts = Format(Now, "yyyymmdd_hhnnss")
+    pivotSheetName = baseName & "_" & ts
+
+    On Error GoTo ErrHandler
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+
+    Set wb = ThisWorkbook
+
+    ' Ensure source sheet exists
+    Set ws = wb.Worksheets("EmployeeData")
+
+    ' define source range (assumes headers in row 1)
+    Set srcRange = ws.Range("A1").CurrentRegion
+    If srcRange Is Nothing Then
+        MsgBox "Source range not found. Make sure data starts at A1.", vbExclamation
+        GoTo Cleanup
+    End If
+
+    ' Check required headers exist in the first row of srcRange
+    ' Use Application.Match which returns Error if not found
+    deptHeader = Application.Match("Department", srcRange.Rows(1), 0)
+    totalPayHeader = Application.Match("Total Pay", srcRange.Rows(1), 0)
+
+    If IsError(deptHeader) Then
+        MsgBox "Header 'Department' not found in row 1 of the source range. Please verify header name.", vbExclamation, "Missing Header"
+        GoTo Cleanup
+    End If
+
+    If IsError(totalPayHeader) Then
+        MsgBox "Header 'Total Pay' not found in row 1 of the source range. Please verify header name.", vbExclamation, "Missing Header"
+        GoTo Cleanup
+    End If
+
+    ' delete previous pivot sheet(s) with the base name if you want (optional)
+    On Error Resume Next
+    Dim sh As Worksheet
+    For Each sh In wb.Worksheets
+        If Left(sh.Name, Len(baseName)) = baseName Then
+            sh.Delete
+        End If
+    Next sh
+    On Error GoTo ErrHandler
+
+    ' add new sheet for pivot table
+    Set pvws = wb.Worksheets.Add(After:=ws)
+    pvws.Name = pivotSheetName
+
+    ' create pivot cache & pivot table
+    Set pc = wb.PivotCaches.Create(SourceType:=xlDatabase, SourceData:=srcRange)
+    Set pt = pc.CreatePivotTable(TableDestination:=pvws.Range("A3"), TableName:="CompPivot_" & ts)
+
+    ' --- configure pivot fields ---
+    With pt
+        .ClearAllFilters
+
+        ' Row field: Department
+        With .PivotFields("Department")
+            .Orientation = xlRowField
+            .Position = 1
+        End With
+
+        ' Data field: Sum of Total Pay
+        .AddDataField .PivotFields("Total Pay"), "Sum of Total Pay", xlSum
+
+        ' Optional: tabular layout for clearer view
+        On Error Resume Next
+        .RowAxisLayout xlTabularRow
+        On Error GoTo ErrHandler
+
+        ' Optional: formatting
+        .ShowTableStyleRowStripes = True
+    End With
+
+    MsgBox "Pivot table created on sheet: " & pvws.Name, vbInformation
+
+Cleanup:
+    Application.EnableEvents = True
+    Application.ScreenUpdating = True
+    Exit Sub
+
+ErrHandler:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Create_Compensation_Pivot"
+    Resume Cleanup
+End Sub
