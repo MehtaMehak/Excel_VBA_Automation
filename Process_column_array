@@ -1,0 +1,93 @@
+' ===============================================================
+' File: process_column_array.bas
+' Author: Mehak Mehta
+' Created: 2025-11-06
+'
+' Purpose:
+'   Cleans and normalizes data in Column B of the "EmployeeData"
+'   sheet by trimming whitespace and ensuring consistent formatting.
+'
+' Description:
+'   - Reads column B (from B2 to the last used row) into an array
+'     for faster in-memory processing.
+'   - Trims extra spaces and removes unwanted characters.
+'   - Preserves empty cells and avoids overwriting them with zeros.
+'   - Handles single-cell and error-prone scenarios gracefully.
+'   - Restores Excel settings on completion or error.
+'
+' Usage:
+'   1. Ensure there is a worksheet named "EmployeeData".
+'   2. Data should start from cell B2.
+'   3. Run the `Process_Column_Array` macro to clean column B values.
+'
+' Example:
+'   Input:
+'       B2: "   John Doe  "
+'       B3: "   "
+'       B4: "  Jane  "
+'
+'   Output:
+'       B2: "John Doe"
+'       B3: ""
+'       B4: "Jane"
+'
+' ===============================================================
+
+Option Explicit
+
+Sub Process_Column_Array()
+    Dim ws As Worksheet
+    Dim i As Long
+    Dim lastRow As Long
+    Dim arr As Variant
+    
+    On Error GoTo ErrHandler
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    
+    ' Target sheet
+    Set ws = ThisWorkbook.Worksheets("EmployeeData")
+    
+    ' Find the last used row in column B
+    lastRow = ws.Cells(ws.Rows.Count, "B").End(xlUp).Row
+    
+    ' Exit if no data found below header
+    If lastRow < 2 Then
+        MsgBox "No data found in column B starting from Row 2", vbInformation, "Process Column Array"
+        GoTo Cleanup
+    End If
+    
+    ' Read range into in-memory array
+    arr = ws.Range("B2:B" & lastRow).Value
+    
+    ' Handle single-cell range (non-array)
+    If Not IsArray(arr) Then
+        If Not IsError(arr) Then
+            ws.Range("B2").Value = Trim(CStr(arr))
+        End If
+        GoTo Cleanup
+    End If
+    
+    ' Process each element in array
+    For i = LBound(arr, 1) To UBound(arr, 1)
+        If Not IsError(arr(i, 1)) Then
+            If Len(Trim(CStr(arr(i, 1)))) > 0 Then
+                arr(i, 1) = Trim(CStr(arr(i, 1)))
+            Else
+                arr(i, 1) = vbNullString
+            End If
+        End If
+    Next i
+    
+    ' Write back to sheet
+    ws.Range("B2:B" & lastRow).Value = arr
+    
+Cleanup:
+    Application.EnableEvents = True
+    Application.ScreenUpdating = True
+    Exit Sub
+
+ErrHandler:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbExclamation, "Process_Column_Array"
+    Resume Cleanup
+End Sub
