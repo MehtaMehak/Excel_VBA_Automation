@@ -37,9 +37,9 @@ Sub Send_Report()
     On Error GoTo ErrHandler
 
     ' ----- Define the report file name and path -----
-    fileName = "Monthly Compensation Report.pdf"  ' <-- Update your filename here
+    fileName = "Monthly Compensation Report.pdf"   ' <-- Update your filename here
     filePath = ThisWorkbook.Path & "\" & fileName
-    ' -----------------------------------------------
+    ' ------------------------------------------------
 
     ' Check if the file exists
     If Dir(filePath) = "" Then
@@ -56,4 +56,34 @@ Sub Send_Report()
     On Error GoTo ErrHandler
 
     If olApp Is Nothing Then
-        MsgBox "Outlook is not available on this system.", vbCri
+        MsgBox "Outlook is not available on this system.", vbCritical, "Outlook Error"
+        Exit Sub
+    End If
+
+    ' Create a new email
+    Set olMail = olApp.CreateItem(0) ' 0 = MailItem
+
+    With olMail
+        .To = "recipient@example.com"                ' Update recipient
+        .CC = ""
+        .BCC = ""
+        .Subject = "Monthly Compensation Report"
+        .Body = "Hello," & vbNewLine & vbNewLine & _
+                "Please find the attached monthly compensation report." & vbNewLine & _
+                "Let me know if you need any changes." & vbNewLine & vbNewLine & _
+                "Regards," & vbNewLine & _
+                "Mehak Mehta"
+
+        .Attachments.Add filePath
+
+        ' Preview the email before sending
+        .Display      ' Use .Send if you want automatic sending
+    End With
+
+    MsgBox "Email created successfully.", vbInformation, "Success"
+    Exit Sub
+
+' ----- Error Handler -----
+ErrHandler:
+    MsgBox "An error occurred: " & Err.Description, vbCritical, "Error"
+End Sub
